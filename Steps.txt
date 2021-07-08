@@ -1,0 +1,128 @@
+https://www.django-rest-framework.org/tutorial/quickstart/
+https://bezkoder.com/category/django/   <= good read 
+
+****************************************************************************
+Project setup  - create project and app in it
+
+# Create the project directory
+mkdir rest-quickstart
+cd rest-quickstart
+
+Install virtualenvwrapper-win
+pip install virtualenvwrapper-win
+
+Create Python virtial env
+mkvirtualenv my_rest_environment
+
+# Install Django and Django REST framework into the virtual environment
+pip install django
+pip install djangorestframework
+
+# Set up a new project with a single application
+django-admin startproject demo .  # Note the trailing '.' character
+cd demo
+django-admin startapp quickstart
+cd ..
+
+#sync your database for the first time:
+python manage.py migrate
+
+#Create a superuser
+python manage.py createsuperuser --email admin@example.com --username admin
+password: admin
+
+****************************************************************************
+Serializers
+
+Define user/group serializers demo/quickstart/serializers.py 
+
+from django.contrib.auth.models import User, Group
+from rest_framework import serializers
+
+class UserSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = User
+        fields = ['url', 'username', 'email', 'groups']
+
+class GroupSerializer(serializers.HyperlinkedModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['url', 'name']
+        
+****************************************************************************
+Views
+
+Open demo/quickstart/views.py 
+
+from django.contrib.auth.models import User, Group
+from rest_framework import viewsets
+from rest_framework import permissions
+from demo.quickstart.serializers import UserSerializer, GroupSerializer
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    """
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class GroupViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows groups to be viewed or edited.
+    """
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+****************************************************************************
+URLs
+#wire up the API URLs. On to demo/urls.py...
+
+from django.urls import include, path
+from rest_framework import routers
+
+
+router = routers.DefaultRouter()
+router.register(r'users', views.UserViewSet)
+router.register(r'groups', views.GroupViewSet)
+
+# Wire up our API using automatic URL routing.
+# Additionally, we include login URLs for the browsable API.
+urlpatterns = [
+    path('', include(router.urls)),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
+]
+
+****************************************************
+python manage.py runserver
+****************************************************************************
+Pagination
+To enable it add the following lines to demo/settings.py
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10
+}
+
+****************************************************************************
+Settings
+Add 'rest_framework' to INSTALLED_APPS. The settings module will be in demo/settings.py
+
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+]
+
+****************************************************************************
+Testing our API
+
+python manage.py runserver
+
+curl -H 'Accept: application/json; indent=4' -u admin:admin@1234 http://127.0.0.1:8000/users/
+
+
+http://127.0.0.1:8000/users/
+http://127.0.0.1:8000/groups/
+
